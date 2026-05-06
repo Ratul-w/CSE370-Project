@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - GameZone</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="../bootstrap.css" rel="stylesheet">
+</head>
+<body>
+    <div class="modal fade" id="banModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ban User: <span id="banUserName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="handle_ban.php">
+                    <input type="hidden" name="user_id" id="banUserId" value="">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Action Type</label>
+                            <select name="ban_type" class="form-select" required>
+                                <option value="suspended">Suspend</option>
+                                <option value="banned">Ban</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ban Period</label>
+                            <select name="ban_period" class="form-select" required>
+                                <option value="7days">7 Days</option>
+                                <option value="30days">30 Days</option>
+                                <option value="1year">1 Year</option>
+                                <option value="permanent">Permanent</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason</label>
+                            <textarea name="reason" class="form-control" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openBanModal(userId, userName) {
+            document.getElementById('banUserId').value = userId;
+            document.getElementById('banUserName').textContent = userName;
+            var modal = new bootstrap.Modal(document.getElementById('banModal'));
+            modal.show();
+        }
+    </script>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 sidebar sidebar-admin d-none d-md-block p-0">
+                <div class="logo">GameZone Admin</div>
+                <nav class="nav flex-column">
+                    <a href="?tab=dashboard" class="nav-link <?= $activeTab=='dashboard'?'active':'' ?>"><i class="bi bi-house me-2"></i>Dashboard</a>
+                    <a href="?tab=users" class="nav-link <?= $activeTab=='users'?'active':'' ?>"><i class="bi bi-people me-2"></i>User Management</a>
+                    <a href="?tab=membership" class="nav-link <?= $activeTab=='membership'?'active':'' ?>"><i class="bi bi-credit-card me-2"></i>Membership Plans</a>
+                    <a href="?tab=payments" class="nav-link <?= $activeTab=='payments'?'active':'' ?>"><i class="bi bi-cash me-2"></i>Payment History</a>
+                    <a href="?tab=bookings" class="nav-link <?= $activeTab=='bookings'?'active':'' ?>"><i class="bi bi-calendar me-2"></i>Bookings</a>
+                    <a href="?tab=refunds" class="nav-link <?= $activeTab=='refunds'?'active':'' ?>"><i class="bi bi-arrow-return-left me-2"></i>Refunds</a>
+                    <a href="?tab=tournaments" class="nav-link <?= $activeTab=='tournaments'?'active':'' ?>"><i class="bi bi-trophy me-2"></i>Tournaments</a>
+                    <a href="?tab=rooms" class="nav-link <?= $activeTab=='rooms'?'active':'' ?>"><i class="bi bi-door-open me-2"></i>Room Management</a>
+                    <a href="manage_games.php" class="nav-link"><i class="bi bi-controller me-2"></i>Manage Games</a>
+                    <a href="?tab=ban" class="nav-link <?= $activeTab=='ban'?'active':'' ?>"><i class="bi bi-x-circle me-2"></i>Ban Records</a>
+                    <a href="../logout.php" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i>Logout</a>
+                </nav>
+            </div>
+
+            <div class="col-12 d-md-none">
+                <nav class="navbar navbar-expand-lg navbar-dark">
+                    <div class="container-fluid">
+                        <span class="navbar-brand">GameZone Admin</span>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileNav">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="mobileNav">
+                            <nav class="nav flex-column">
+                                <a href="?tab=dashboard" class="nav-link">Dashboard</a>
+                                <a href="?tab=users" class="nav-link">User Management</a>
+                                <a href="?tab=membership" class="nav-link">Membership Plans</a>
+                                <a href="?tab=payments" class="nav-link">Payment History</a>
+                                <a href="?tab=bookings" class="nav-link">Bookings</a>
+                                <a href="?tab=refunds" class="nav-link">Refunds</a>
+                                <a href="?tab=tournaments" class="nav-link">Tournaments</a>
+                                <a href="?tab=rooms" class="nav-link">Room Management</a>
+                                <a href="manage_games.php" class="nav-link">Manage Games</a>
+                                <a href="?tab=ban" class="nav-link">Ban Records</a>
+                                <a href="../logout.php" class="nav-link text-danger">Logout</a>
+                            </nav>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <?php if (isset($_SESSION['booking_error'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <strong>Error!</strong> <?= $_SESSION['booking_error']; unset($_SESSION['booking_error']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php endif; ?>
+                
+                <?php if ($activeTab == 'dashboard' || !$activeTab): ?>
+                <h4 class="mb-4">Dashboard Overview</h4>
+                <p class="text-muted">Welcome, <?= htmlspecialchars($_SESSION['f_name'] ?? $_SESSION['username']) ?>!</p>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-people display-4 text-primary"></i>
+                            <h5 class="mt-3">Total Users</h5>
+                            <h2 class="text-primary"><?= $stats['total_users'] ?></h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-person-check display-4 text-success"></i>
+                            <h5 class="mt-3">Active Members</h5>
+                            <h2 class="text-success"><?= $stats['active_members'] ?></h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-person-x display-4 text-danger"></i>
+                            <h5 class="mt-3">Banned/Suspended</h5>
+                            <h2 class="text-danger"><?= $stats['banned_users'] ?></h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-cash display-4 text-primary"></i>
+                            <h5 class="mt-3">Total Payments</h5>
+                            <h2 class="text-primary"><?= $stats['total_payments'] ?></h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-cash display-4 text-success"></i>
+                            <h5 class="mt-3">Net Revenue</h5>
+                            <h2 class="text-success"><?= number_format($stats['net_revenue'], 0) ?> BDT</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-arrow-left display-4 text-warning"></i>
+                            <h5 class="mt-3">Total Refunds</h5>
+                            <h2 class="text-warning"><?= number_format($stats['total_refunds'], 0) ?> BDT</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-door-open display-4 text-info"></i>
+                            <h5 class="mt-3">Available Rooms</h5>
+                            <h2 class="text-info"><?= $stats['available_rooms'] ?></h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-trophy display-4 text-warning"></i>
+                            <h5 class="mt-3">Active Tournaments</h5>
+                            <h2 class="text-warning"><?= $stats['active_tournaments'] ?></h2>
+                        </div>
+                    </div>
+                </div>
+
+                <?php elseif ($activeTab == 'users'): ?>
+                <h4 class="mb-4">User Management</h4>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Visits</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $users = $conn->query("SELECT SQL_NO_CACHE * FROM User ORDER BY user_id DESC");
+                            while ($user = $users->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td><?= $user['user_id'] ?></td>
+                                <td><?= htmlspecialchars($user['f_name'] . ' ' . $user['l_name']) ?></td>
+                                <td><?= htmlspecialchars($user['email']) ?></td>
+                                <td><span class="badge bg-<?= $user['role'] == 'admin' ? 'dark' : 'primary' ?>"><?= $user['role'] ?></span></td>
+                                <td><span class="badge bg-<?= $user['status'] == 'active' ? 'success' : 'danger' ?>"><?= $user['status'] ?></span></td>
+                                <td><?= $user['visit_count'] ?></td>
+                                <td>
+                                    <?php if ($user['status'] === 'banned' || $user['status'] === 'suspended'): ?>
+                                    <a href="handle_ban.php?action=unban&user_id=<?= $user['user_id'] ?>&return_tab=users" class="btn btn-success btn-sm" onclick="return confirm('Unban this user?')">Unban</a>
+                                    <button class="btn btn-danger btn-sm" onclick="openBanModal(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['f_name'] . ' ' . $user['l_name']) ?>')">Ban</button>
+                                    <?php else: ?>
+                                    <button class="btn btn-danger btn-sm" onclick="openBanModal(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['f_name'] . ' ' . $user['l_name']) ?>')">Ban</button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+                <?php elseif ($activeTab == 'membership'): ?>
+                <h4 class="mb-4">Membership Plans</h4>
+                <form method="POST" action="handle_membership.php" class="card p-4 mb-4">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Plan Name</label>
+                            <input type="text" name="plan_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">For Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="">Select Role</option>
+                                <option value="visitor">Visitor</option>
+                                <option value="player">Player</option>
+                                <option value="host">Host</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Duration (days)</label>
+                            <input type="number" name="duration" class="form-control" min="1" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Fee (BDT)</label>
+                            <input type="number" name="fee" class="form-control" min="0" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Description</label>
+                            <input type="text" name="description" class="form-control" placeholder="Plan details">
+                        </div>
+                    </div>
+                    <button type="submit" name="action" value="add" class="btn btn-primary mt-3">Add Plan</button>
+                </form>
+                    
+                <?php
+                $plans = $conn->query("SELECT * FROM MembershipPlan ORDER BY role, plan_id");
+                if ($plans && $plans->num_rows > 0):
+                ?>
+                <div class="card stat-card p-4">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Plan Name</th>
+                                <th>For Role</th>
+                                <th>Duration</th>
+                                <th>Fee</th>
+                                <th>Description</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($plan = $plans->fetch_assoc()): ?>
+                            <tr>
+                                <td><strong><?= htmlspecialchars($plan['plan_name']) ?></strong></td>
+                                <td>
+                                    <span class="badge bg-<?= $plan['role'] == 'visitor' ? 'info' : ($plan['role'] == 'player' ? 'success' : 'warning') ?>">
+                                        <?= ucfirst($plan['role']) ?>
+                                    </span>
+                                </td>
+                                <td><?= $plan['duration'] ?> days</td>
+                                <td><strong class="text-success"><?= number_format($plan['fee'], 2) ?> BDT</strong></td>
+                                <td><?= htmlspecialchars($plan['description']) ?></td>
+                                <td>
+                                    <form method="POST" action="handle_membership.php" style="display:inline;">
+                                        <input type="hidden" name="plan_id" value="<?= $plan['plan_id'] ?>">
+                                        <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Delete this plan?')">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php else: ?>
+                <div class="alert alert-info">No membership plans found. Add one above!</div>
+                <?php endif; ?>
+                    
+                <?php elseif ($activeTab == 'payments'): ?>
+                <h4 class="mb-4">Payment History</h4>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Payment ID</th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Amount</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $payments = $conn->query("
+                                SELECT p.*, u.f_name, u.l_name, u.role 
+                                FROM Payment p 
+                                LEFT JOIN Makes m ON p.payment_id = m.payment_id
+                                LEFT JOIN Buy b ON p.payment_id = b.payment_id
+                                LEFT JOIN User u ON (m.user_id = u.user_id OR b.user_id = u.user_id)
+                                WHERE p.pay_status = 'completed'
+                                ORDER BY p.payment_id DESC
+                            ");
+                            if ($payments && $payments->num_rows > 0):
+                                while ($p = $payments->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td>#<?= $p['payment_id'] ?></td>
+                                <td><?= !empty($p['f_name']) ? htmlspecialchars($p['f_name'] . ' ' . $p['l_name']) : '<span class="text-muted">N/A</span>' ?></td>
+                                <td>
+                                    <?php if (!empty($p['role'])): ?>
+                                    <span class="badge bg-<?= $p['role'] == 'admin' ? 'dark' : 'primary' ?>">
+                                        <?= ucfirst($p['role']) ?>
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="text-muted">N/A</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><strong class="text-success"><?= number_format($p['amount'], 2) ?> BDT</strong></td>
+                                <td><?= ucfirst($p['pay_type']) ?></td>
+                                <td><span class="badge bg-<?= $p['pay_status'] == 'completed' ? 'success' : 'warning' ?>"><?= $p['pay_status'] ?></span></td>
+                                <td><?= date('M d, Y', strtotime($p['pay_date'])) ?></td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="7" class="text-center">No payments found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                    
+                <?php elseif ($activeTab == 'bookings'): ?>
+                <h4 class="mb-4">Bookings</h4>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>User</th>
+                                <th>Room</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $bookings = $conn->query("
+                                SELECT b.*, r.room_name, u.f_name, u.l_name 
+                                FROM Booking b 
+                                LEFT JOIN Room r ON b.room_id = r.room_id 
+                                LEFT JOIN Makes m ON b.booking_id = m.booking_id 
+                                LEFT JOIN User u ON m.user_id = u.user_id 
+                                ORDER BY b.booking_id DESC
+                            ");
+                            if ($bookings && $bookings->num_rows > 0):
+                                while ($b = $bookings->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td>#<?= $b['booking_id'] ?></td>
+                                <td><?= htmlspecialchars(($b['f_name'] ?? '') . ' ' . ($b['l_name'] ?? 'Guest')) ?></td>
+                                <td><?= htmlspecialchars($b['room_name'] ?? 'N/A') ?></td>
+                                <td><?= $b['booking_date'] ?></td>
+                                <td><?= $b['start_time'] ?> - <?= $b['end_time'] ?></td>
+                                <td><span class="badge bg-<?= $b['booking_type'] == 'tournament' ? 'warning' : 'info' ?>"><?= $b['booking_type'] ?></span></td>
+                                <td>
+                                    <span class="badge bg-<?= $b['status'] == 'confirmed' ? 'success' : ($b['status'] == 'cancelled' ? 'danger' : 'secondary') ?>"><?= $b['status'] ?></span>
+                                    <?php if ($b['status'] != 'cancelled'): ?>
+                                    <form method="POST" action="handle_booking.php" class="d-inline">
+                                        <input type="hidden" name="booking_id" value="<?= $b['booking_id'] ?>">
+                                        <input type="hidden" name="action" value="cancel">
+                                        <button type="submit" class="btn btn-warning btn-sm">Cancel</button>
+                                    </form>
+                                    <?php endif; ?>
+                                    <form method="POST" action="handle_booking.php" class="d-inline" onsubmit="return confirm('Delete this booking?')">
+                                        <input type="hidden" name="booking_id" value="<?= $b['booking_id'] ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="7" class="text-center">No bookings found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                    
+                <?php elseif ($activeTab == 'refunds'): ?>
+                <h4 class="mb-4">Refund History</h4>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Refund ID</th>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Amount</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $refunds = $conn->query("
+                                SELECT p.*, u.f_name, u.l_name, u.role 
+                                FROM Payment p 
+                                LEFT JOIN Makes m ON p.payment_id = m.payment_id
+                                LEFT JOIN Buy b ON p.payment_id = b.payment_id
+                                LEFT JOIN User u ON (m.user_id = u.user_id OR b.user_id = u.user_id)
+                                WHERE p.pay_type = 'refund' AND p.pay_status = 'completed'
+                                ORDER BY p.payment_id DESC
+                            ");
+                            if ($refunds && $refunds->num_rows > 0):
+                                while ($r = $refunds->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td>#<?= $r['payment_id'] ?></td>
+                                <td><?= !empty($r['f_name']) ? htmlspecialchars($r['f_name'] . ' ' . $r['l_name']) : '<span class="text-muted">N/A</span>' ?></td>
+                                <td>
+                                    <?php if (!empty($r['role'])): ?>
+                                    <span class="badge bg-<?= $r['role'] == 'admin' ? 'dark' : 'primary' ?>">
+                                        <?= ucfirst($r['role']) ?>
+                                    </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><strong class="text-danger"><?= number_format($r['amount'], 2) ?> BDT</strong></td>
+                                <td><?= date('M d, Y', strtotime($r['pay_date'])) ?></td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="5" class="text-center">No refunds found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                    
+                <?php elseif ($activeTab == 'tournaments'): ?>
+                <h4 class="mb-4">Tournament Management</h4>
+                <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addTournamentModal">Create Tournament</button>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Created By</th>
+                                <th>Arena</th>
+                                <th>Visitors</th>
+                                <th>Players</th>
+                                <th>Entry Fee</th>
+                                <th>Status</th>
+                                <th>Start Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $tournaments = $conn->query("
+                                SELECT t.*, r.room_name, u.f_name as creator_fname, u.l_name as creator_lname
+                                FROM Tournament t 
+                                LEFT JOIN Room r ON t.room_id = r.room_id 
+                                LEFT JOIN User u ON t.user_id = u.user_id
+                                ORDER BY tournament_id DESC
+                            ");
+                            while ($tournament = $tournaments->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td><?= $tournament['tournament_id'] ?></td>
+                                <td><?= htmlspecialchars($tournament['t_name']) ?></td>
+                                <td>
+                                    <?php 
+                                    $creatorName = trim(($tournament['creator_fname'] ?? '') . ' ' . ($tournament['creator_lname'] ?? ''));
+                                    echo $creatorName ? htmlspecialchars($creatorName) : 'Admin System';
+                                    ?>
+                                </td>
+                                <td><?= htmlspecialchars($tournament['room_name'] ?? 'N/A') ?></td>
+                                <td><?= $tournament['visitor_count'] ?> / <?= $tournament['visitor_limit'] ?? 50 ?></td>
+                                <td>
+                                    <?php
+                                    $pc = $conn->query("SELECT COUNT(*) as c FROM Participate WHERE tournament_id={$tournament['tournament_id']}")->fetch_assoc()['c'];
+                                    echo $pc . ' / ' . ($tournament['player_limit'] ?? 16);
+                                    if ($pc >= ($tournament['player_limit'] ?? 16)) echo ' <span class="badge bg-danger">Full</span>';
+                                    ?>
+                                </td>
+                                <td><?= number_format($tournament['entry_fee'], 0) ?> BDT</td>
+                                <td><span class="badge bg-<?= $tournament['status'] == 'completed' ? 'secondary' : 'success' ?>"><?= $tournament['status'] ?></span></td>
+                                <td><?= date('M d, Y', strtotime($tournament['start_date'])) ?></td>
+                                <td>
+                                    <button class="btn btn-info btn-sm" onclick="showParticipants(<?= $tournament['tournament_id'] ?>, '<?= htmlspecialchars(addslashes($tournament['t_name'])) ?>')">View</button>
+                                    <form method="POST" action="handle_tournament.php" class="d-inline">
+                                        <input type="hidden" name="tournament_id" value="<?= $tournament['tournament_id'] ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="modal fade" id="addTournamentModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Create Tournament</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="handle_tournament.php">
+                                <input type="hidden" name="action" value="create">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Tournament Name</label>
+                                        <input type="text" name="t_name" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Entry Fee (BDT)</label>
+                                        <input type="number" name="entry_fee" class="form-control" min="0" step="1" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Arena (Room)</label>
+                                        <select name="room_id" class="form-select" id="adminRoomSelect" required>
+                                            <option value="">Select Arena</option>
+                                            <?php
+                                            $rooms = $conn->query("SELECT * FROM Room WHERE room_type = 'tournament'");
+                                            while ($room = $rooms->fetch_assoc()):
+                                            ?>
+                                            <option value="<?= $room['room_id'] ?>" data-capacity="<?= $room['capacity'] ?>"><?= htmlspecialchars($room['room_name']) ?> (Capacity: <?= $room['capacity'] ?>)</option>
+                                            <?php endwhile; ?>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Visitor Limit</label>
+                                        <input type="number" name="visitor_limit" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Player Limit</label>
+                                        <input type="number" name="player_limit" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Start Date</label>
+                                        <input type="date" name="start_date" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">End Date</label>
+                                        <input type="date" name="end_date" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Create</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal fade" id="participantsModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Participants: <span id="modalTournamentName"></span></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="participantsContent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <script>
+                let participantsModal;
+                document.addEventListener('DOMContentLoaded', function() {
+                    participantsModal = new bootstrap.Modal(document.getElementById('participantsModal'));
+                });
+                function showParticipants(id, name) {
+                    document.getElementById('modalTournamentName').textContent = name;
+                    document.getElementById('participantsContent').innerHTML = '<p>Loading...</p>';
+                    
+                    fetch('get_participants.php?tournament_id=' + id)
+                        .then(res => res.text())
+                        .then(html => {
+                            document.getElementById('participantsContent').innerHTML = html;
+                        })
+                        .catch(err => {
+                            document.getElementById('participantsContent').innerHTML = '<p class="text-danger">Error loading participants</p>';
+                        });
+                    
+                    participantsModal.show();
+                }
+                </script>
+                    
+                <?php elseif ($activeTab == 'rooms'): ?>
+                <h4 class="mb-4">Room Management</h4>
+                <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addRoomModal">Add Room</button>
+                <div class="row g-4">
+                    <?php
+                    $rooms = $conn->query("SELECT * FROM Room ORDER BY room_id DESC");
+                    while ($room = $rooms->fetch_assoc()):
+                    ?>
+                    <div class="col-md-4">
+                        <div class="card stat-card p-4 text-center">
+                            <i class="bi bi-door-open display-4 text-primary"></i>
+                            <h5 class="mt-3"><?= htmlspecialchars($room['room_name']) ?></h5>
+                            <p class="text-muted"><?= ucfirst($room['room_type']) ?> | Capacity: <?= $room['capacity'] ?></p>
+                            <span class="badge bg-<?= $room['availability_status'] == 'available' ? 'success' : 'danger' ?>"><?= $room['availability_status'] ?></span>
+                            <div class="mt-3">
+                                <form method="POST" action="handle_room.php" class="d-inline">
+                                    <input type="hidden" name="room_id" value="<?= $room['room_id'] ?>">
+                                    <input type="hidden" name="action" value="maintenance">
+                                    <button type="submit" class="btn btn-warning btn-sm">Maintenance</button>
+                                </form>
+                                <form method="POST" action="handle_room.php" class="d-inline">
+                                    <input type="hidden" name="room_id" value="<?= $room['room_id'] ?>">
+                                    <input type="hidden" name="action" value="available">
+                                    <button type="submit" class="btn btn-success btn-sm">Available</button>
+                                </form>
+                                <form method="POST" action="handle_room.php" class="d-inline" onsubmit="return confirm('Delete this room?')">
+                                    <input type="hidden" name="room_id" value="<?= $room['room_id'] ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endwhile; ?>
+                </div>
+
+                <div class="modal fade" id="addRoomModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Add Room</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="handle_room.php">
+                                <input type="hidden" name="action" value="add">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Room Name</label>
+                                        <input type="text" name="room_name" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Room Type</label>
+                                        <select name="room_type" class="form-select" required>
+                                            <option value="regular">Regular</option>
+                                            <option value="tournament">Tournament</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Capacity</label>
+                                        <input type="number" name="capacity" class="form-control" required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Add Room</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <?php elseif ($activeTab == 'ban'): ?>
+                <h4 class="mb-4">Ban/Suspension Records</h4>
+                <div class="card stat-card p-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Type</th><th>Reason</th><th>Start Date</th><th>End Date</th><th>User</th><th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $bans = $conn->query("SELECT br.*, u.f_name, u.l_name, u.user_id as uid FROM BanRecord br INNER JOIN Implement i ON br.ban_id = i.ban_id INNER JOIN User u ON i.user_id = u.user_id WHERE u.status IN ('banned', 'suspended') AND (br.end_date IS NULL OR br.end_date >= CURDATE()) ORDER BY br.ban_id DESC");
+                            if ($bans && $bans->num_rows > 0):
+                            while ($ban = $bans->fetch_assoc()):
+                            ?>
+                            <tr>
+                                <td><?= $ban['ban_id'] ?></td>
+                                <td><span class="badge bg-<?= $ban['ban_type'] == 'banned' ? 'danger' : 'warning' ?>"><?= $ban['ban_type'] ?></span></td>
+                                <td><?= htmlspecialchars($ban['reason']) ?></td>
+                                <td><?= date('M d, Y', strtotime($ban['start_date'])) ?></td>
+                                <td><?= $ban['end_date'] ? date('M d, Y', strtotime($ban['end_date'])) : 'Permanent' ?></td>
+                                <td><?= htmlspecialchars(($ban['f_name'] ?? '') . ' ' . ($ban['l_name'] ?? '')) ?></td>
+                                <td>
+                                    <?php if (($ban['f_name'] ?? '') && ($ban['uid'] ?? 0) > 0): ?>
+                                    <a href="handle_ban.php?action=unban&user_id=<?= $ban['uid'] ?>&return_tab=ban" class="btn btn-success btn-sm" onclick="return confirm('Unban this user?')">Unban</a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="7" class="text-center">No ban records found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
