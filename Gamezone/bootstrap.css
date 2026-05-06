@@ -1,0 +1,38 @@
+/* GameZone Custom Styles - Minimal Bootstrap Overrides */
+
+/* Sidebar */
+.sidebar { min-height: 100vh; }
+.sidebar .logo { padding: 20px; font-size: 1.5rem; font-weight: bold; text-align: center; }
+.sidebar .nav-link { padding: 12px 20px; margin: 2px 8px; border-radius: 8px; transition: all 0.3s; }
+.sidebar .nav-link:hover { background: rgba(255,255,255,0.15); }
+.sidebar .nav-link.active { background: rgba(255,255,255,0.15); }
+.sidebar .nav-link.text-danger:hover { background: rgba(220,53,69,0.2); }
+
+/* Role-specific sidebars */
+.sidebar-admin { background: linear-gradient(180deg, #1a1a2e, #16213e); }
+.sidebar-host { background: linear-gradient(180deg, #7c3aed, #5b21b6); }
+.sidebar-player { background: linear-gradient(180deg, #059669, #047857); }
+.sidebar-visitor { background: linear-gradient(180deg, #6b7280, #4b5563); }
+.sidebar .logo, .sidebar .nav-link { color: rgba(255,255,255,0.9); text-decoration: none; }
+
+/* Card tweaks */
+.stat-card { text-align: center; }
+
+/* Login page */
+body.login-page {
+    background: url('assets/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
+}
+.login-card {
+    border-radius: 15px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+}
+.login-card h2 { font-size: 1.75rem; margin-bottom: 5px; }
+
+/* Card max-width */
+.card-max-600 { max-width: 600px; }
+
+/* Responsive */
+@media (max-width: 768px) { .table { font-size: 14px; } }
